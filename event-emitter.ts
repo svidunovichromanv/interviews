@@ -1,6 +1,5 @@
 
 class EventEmitter {
-    // @ts-ignore
     private events: Map<string, ((...args: any[]) => any)[]> = new Map();
 
     public on(eventName: string, listener: (...args: any[]) => any): this {
@@ -13,8 +12,8 @@ class EventEmitter {
     }
 
     public once(eventName: string, listener: (...args: any[]) => any): this {
-        const onceListener = (...arg: any[]) => {
-            listener(...arg);
+        const onceListener = (...args: any[]) => {
+            listener(...args);
             this.off(eventName, onceListener);
         };
         this.on(eventName, onceListener);
@@ -44,21 +43,78 @@ class EventEmitter {
     }
 }
 
-const emitter = new EventEmitter();
+function assert(statement: boolean, message: string) {
+    if (statement) {
+        console.error(message);
+        throw new Error(message)
+    }
+}
 
-emitter.once('start', (a: string) => {
-    console.log('start', a);
-});
-emitter.once('start', (a: string) => {
-    console.log('start', a);
-});
-const listenerEnd = (a: string) => {
-    console.log('end', a);
-};
-emitter.on('end', listenerEnd);
+function testOn(): void {
+    const emitter = new EventEmitter();
+    let called = false;
+    emitter.on('test', () => {
+        called = true;
+    });
+    emitter.emit('test');
+    assert(!called, 'The on method did not register the event listener correctly.');
+}
 
-emitter.emit('start', ' new app');
-emitter.emit('start', ' old app');
-emitter.emit('end', ' new app').off('end', listenerEnd);
+function testOnce(): void {
+    const emitter = new EventEmitter();
+    let callCount = 0;
+    emitter.once('test', () => {
+        callCount++;
+    });
+    emitter.emit('test');
+    emitter.emit('test');
+    assert(callCount !== 1, 'The once method did not unregister the listener after one call.');
+}
 
-emitter.emit('end', ' old app');
+function testEmit(): void {
+    const emitter = new EventEmitter();
+    let result = '';
+    emitter.on('test', (msg: string) => {
+        result = msg;
+    });
+    emitter.emit('test', 'Hello');
+    assert(result !== 'Hello', 'The emit method did not pass arguments correctly to listeners.');
+}
+
+function testOff(): void {
+    const emitter = new EventEmitter();
+    let called = false;
+    const listener = () => {
+        called = true;
+    };
+    emitter.on('test', listener);
+    emitter.off('test', listener);
+    emitter.emit('test');
+    assert(called, 'The off method did not remove the listener correctly.');
+}
+
+function testRemoveAllListeners(): void {
+    const emitter = new EventEmitter();
+    let called = false;
+    emitter.on('test', () => {
+        called = true;
+    });
+    emitter.removeAllListeners('test');
+    emitter.emit('test');
+    assert(called, 'The removeAllListeners method did not remove all listeners correctly.');
+}
+
+function runTests() {
+    try {
+        testOn();
+        testOnce();
+        testEmit();
+        testOff();
+        testRemoveAllListeners();
+        console.log('All tests passed.');
+    } catch (error) {
+        console.error(error);
+    }
+}
+
+runTests();
